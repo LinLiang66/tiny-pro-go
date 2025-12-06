@@ -1,4 +1,4 @@
-# Tiny Pro Admin Go 
+# Tiny Pro Go 
 
 ## 说明
 
