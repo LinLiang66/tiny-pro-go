@@ -15,29 +15,28 @@ var Menu = MenuImpl{}
 
 // GetMenubyEmail 根据邮箱获取菜单
 func (m MenuImpl) GetMenubyEmail(email string) ([]dto.MenuVo, error) {
-	// 1. 通过email获取用户
+	// 1. 通过email获取用户，并预加载角色信息
 	var user dto.User
-	err := utils.Db.DB.Where("email = ?", email).First(&user).Error
+	err := utils.Db.DB.Preload("Roles").Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	// 2. 获取用户的所有角色ID (简化处理，实际应通过关联表查询)
-	var roles []dto.Role
-	// 这里需要根据实际的用户角色关联关系进行查询
-
+	// 2. 获取用户的所有角色ID
+	var roles = user.Roles
 	if len(roles) == 0 {
 		return []dto.MenuVo{}, nil
 	}
-
 	roleIds := make([]int64, len(roles))
 	for i, role := range roles {
 		roleIds[i] = role.ID
 	}
 
-	// 3. 获取这些角色关联的所有菜单 (简化处理)
-	var menus []dto.Menu
-	// 这里需要根据实际的角色菜单关联关系进行查询
+	// 3. 获取这些角色关联的所有菜单
+	menus, err := m.FindMenusByRoleIds(roleIds)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(menus) == 0 {
 		return []dto.MenuVo{}, nil
@@ -52,7 +51,7 @@ func (m MenuImpl) GetMenubyEmail(email string) ([]dto.MenuVo, error) {
 func (m MenuImpl) FindAllMenu() ([]dto.MenuVo, error) {
 	// 1. 查询所有菜单并按order排序
 	var menus []dto.Menu
-	result := utils.Db.DB.Order("order ASC").Find(&menus)
+	result := utils.Db.DB.Order("`order` ASC").Find(&menus)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -223,4 +222,20 @@ func (m MenuImpl) convertToVo(menu dto.Menu) dto.MenuVo {
 	menuVo.Children = &children
 
 	return menuVo
+}
+
+// FindMenusByRoleIds 根据角色IDs查询关联的菜单
+func (m MenuImpl) FindMenusByRoleIds(roleIds []int64) ([]dto.Menu, error) {
+	var menus []dto.Menu
+	result := utils.Db.DB.
+		Distinct().
+		Joins("JOIN role_menu ON menu.id = role_menu.menu_id").
+		Where("role_menu.role_id IN ?", roleIds).
+		Find(&menus)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return menus, nil
 }

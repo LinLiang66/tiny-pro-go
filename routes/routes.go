@@ -32,6 +32,8 @@ func RouterUser(engine *gin.Engine) {
 		userGroup.POST("/reg", userController.Register)
 		userGroup.GET("/info/:email", userController.GetUserInfo)
 		userGroup.GET("/info", userController.GetUserInfo)
+		userGroup.GET("/info/", userController.GetUserInfo)
+		userGroup.GET("/info/:email/", userController.GetUserInfo)
 		userGroup.DELETE("/:email", userController.DelUser)
 		userGroup.PATCH("/update", userController.UpdateUser)
 		userGroup.GET("", userController.GetAllUser)
@@ -54,6 +56,7 @@ func RouterUser(engine *gin.Engine) {
 	menuGroup := engine.Group("/menu")
 	menuGroup.Use(middleware.Auth.AuthRequired())
 	{
+		menuGroup.GET("/role/:email", menuController.GetMenus)
 		menuGroup.POST("", menuController.Create)
 		menuGroup.GET("", menuController.GetAll)
 		menuGroup.PATCH("", menuController.Update)
@@ -67,6 +70,27 @@ func RouterUser(engine *gin.Engine) {
 		permissionGroup.GET("", permissionController.GetAll)
 		permissionGroup.PATCH("", permissionController.Update)
 		permissionGroup.DELETE("/:id", permissionController.Delete)
+	}
+	i18Controller := controller.NewI18Controller()
+	i18Group := engine.Group("/i18")
+	i18Group.Use(middleware.Auth.AuthRequired())
+	{
+		i18Group.POST("", i18Controller.CreateI18Dto)
+		i18Group.GET("/format", i18Controller.GetFormat)
+		i18Group.GET("", i18Controller.FindAll)
+		i18Group.GET("/:id", i18Controller.FindOne)
+		i18Group.PATCH("/:id", i18Controller.Update)
+		i18Group.DELETE("/:id", i18Controller.Remove)
+		i18Group.POST("/batch", i18Controller.BatchRemove)
+	}
+	langController := controller.NewLangController()
+	langGroup := engine.Group("/lang")
+	langGroup.Use(middleware.Auth.AuthRequired())
+	{
+		langGroup.POST("", langController.CreateLang)
+		langGroup.GET("", langController.FindAllLang)
+		langGroup.PATCH("/:id", langController.UpdateLang)
+		langGroup.DELETE("/:id", langController.RemoveLang)
 	}
 
 }

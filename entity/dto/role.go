@@ -7,8 +7,10 @@ type CreateRoleDto struct {
 }
 
 type Role struct {
-	ID   int64  `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name string `json:"name" gorm:"column:name"`
+	ID          int64        `json:"id" gorm:"primaryKey;autoIncrement"`
+	Name        string       `json:"name" gorm:"column:name"`
+	Permissions []Permission `json:"permission,omitempty" gorm:"many2many:role_permission;"`
+	Menus       []Menu       `json:"menus,omitempty" gorm:"many2many:role_menu;"`
 }
 
 // TableName 指定表名

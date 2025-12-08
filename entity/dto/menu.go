@@ -1,7 +1,5 @@
 package dto
 
-import "time"
-
 type MenuVo struct {
 	ID         int64     `json:"id"`
 	Label      string    `json:"label"`
@@ -16,17 +14,15 @@ type MenuVo struct {
 }
 
 type Menu struct {
-	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
-	Name      string    `json:"name" gorm:"column:name"`
-	Order     int       `json:"order" gorm:"column:order"`
-	ParentId  *int64    `json:"parentId" gorm:"column:parent_id"`
-	MenuType  string    `json:"menuType" gorm:"column:menu_type"`
-	Icon      string    `json:"icon" gorm:"column:icon"`
-	Component string    `json:"component" gorm:"column:component"`
-	Path      string    `json:"path" gorm:"column:path"`
-	Locale    string    `json:"locale" gorm:"column:locale"`
-	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
-	UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	ID        int64  `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
+	Name      string `json:"name" gorm:"column:name"`
+	Order     int    `json:"order" gorm:"column:order"`
+	ParentId  *int64 `json:"parentId" gorm:"column:parentId"`
+	MenuType  string `json:"menuType" gorm:"column:menuType"`
+	Icon      string `json:"icon" gorm:"column:icon"`
+	Component string `json:"component" gorm:"column:component"`
+	Path      string `json:"path" gorm:"column:path"`
+	Locale    string `json:"locale" gorm:"column:locale"`
 }
 
 // TableName 指定表名

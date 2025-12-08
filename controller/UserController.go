@@ -23,7 +23,7 @@ func NewUserController() *UserController {
 
 func (uc *UserController) GetUserInfo(c *gin.Context) {
 	email := c.Param("email")
-	if &email == nil {
+	if email == "" {
 		// 从JWT获取当前用户邮箱
 		claims, _ := c.Get("claims")
 		userClaims := claims.(*middleware.UserClaims)
@@ -122,7 +122,7 @@ func (uc *UserController) GetAllUser(c *gin.Context) {
 		}
 	}
 
-	users, _, err := uc.userService.GetAllUser(paginationQuery, name, email, roles)
+	users, err := uc.userService.GetAllUser(paginationQuery, name, email, roles)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

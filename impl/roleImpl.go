@@ -159,10 +159,10 @@ func (r RoleImpl) FindAllRole() ([]dto.Role, error) {
 	return roleSimpleVos, nil
 }
 
-// FindOne 根据ID查找角色
+// FindOne 根据ID查找角色，包含关联的权限和菜单信息
 func (r RoleImpl) FindOne(id int) (*dto.Role, error) {
 	var role dto.Role
-	err := utils.Db.DB.Where("id = ?", id).First(&role).Error
+	err := utils.Db.DB.Where("id = ?", id).Preload("Permissions").Preload("Menus").First(&role).Error
 	if err != nil {
 		return nil, errors.New("role not found")
 	}

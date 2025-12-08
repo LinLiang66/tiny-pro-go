@@ -25,7 +25,7 @@ type Meta struct {
 	NumberOfElements int   `json:"numberOfElements"`
 	Size             int   `json:"size"`
 	TotalPages       int   `json:"totalPages"`
-	Number           int   `json:"number"` // 从 1 开始
+	Number           int   `json:"totalItems"` // 从 1 开始
 }
 
 // NewPageWrapper 创建新的分页包装器

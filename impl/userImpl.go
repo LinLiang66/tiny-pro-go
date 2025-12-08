@@ -4,6 +4,8 @@ import (
 	"errors"
 	"tiny-admin-api-serve/entity/dto"
 	"tiny-admin-api-serve/utils"
+
+	"gorm.io/gorm"
 )
 
 type UserImpl struct {
@@ -12,19 +14,21 @@ type UserImpl struct {
 
 var User = UserImpl{}
 
-// FindByEmail 获取用户信息
+// FindByEmail 获取用户信息，包括角色及角色关联的权限和菜单
 func (u UserImpl) FindByEmail(email string, user *dto.User) error {
-	// 先查询用户
 	err := utils.Db.DB.Model(&dto.User{}).
 		Where("email = ?", email).
+		Preload("Roles").             // 预加载用户的角色
+		Preload("Roles.Permissions"). // 预加载角色的权限
+		Preload("Roles.Menus").       // 预加载角色的菜单
 		First(user).
 		Error
-	if err != nil {
-		return err
+
+	// 明确处理用户不存在的情况
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.New("user not found")
 	}
 
-	// 再查询用户的角色
-	err = utils.Db.DB.Model(user).Association("Roles").Find(&user.Roles)
 	return err
 }
 
@@ -62,7 +66,7 @@ func (u UserImpl) CreateUser(createUserDto dto.CreateUserDto, isInit bool) (*dto
 		ProtocolEnd:       createUserDto.ProtocolEnd,
 		Address:           createUserDto.Address,
 		Salt:              salt,
-		Status:            1, // 默认状态
+		Status:            *createUserDto.Status, // 默认状态
 	}
 
 	if createUserDto.Status != nil {
@@ -156,7 +160,7 @@ func (u UserImpl) UpdateUserInfo(updateUserDto dto.UpdateUserDto) (*dto.User, er
 }
 
 // GetAllUser 获取所有用户（分页）
-func (u UserImpl) GetAllUser(paginationQuery dto.PaginationQueryDto, name, email string, roles []int) ([]dto.User, int64, error) {
+func (u UserImpl) GetAllUser(paginationQuery dto.PaginationQueryDto, name, email string, roles []int) (*dto.PageWrapper[dto.User], error) {
 	var users []dto.User
 	var total int64
 
@@ -184,10 +188,24 @@ func (u UserImpl) GetAllUser(paginationQuery dto.PaginationQueryDto, name, email
 	result := query.Offset(offset).Limit(paginationQuery.Limit).Find(&users)
 
 	if result.Error != nil {
-		return nil, 0, result.Error
+		return nil, result.Error
+	}
+	// 计算分页信息
+	totalPages := 1
+	if paginationQuery.Limit > 0 {
+		totalPages = int((total + int64(paginationQuery.Limit) - 1) / int64(paginationQuery.Limit))
 	}
 
-	return users, total, nil
+	pageWrapper := dto.NewPageWrapper[dto.User](
+		users,
+		total,
+		len(users),
+		paginationQuery.Limit,
+		totalPages,
+		paginationQuery.Page,
+	)
+	return pageWrapper, nil
+
 }
 
 // UpdatePwdAdmin 管理员强制更新密码
