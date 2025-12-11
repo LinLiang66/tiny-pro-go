@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"tiny-admin-api-serve/middleware"
 	routers "tiny-admin-api-serve/routes"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,9 @@ func main() {
 		return
 	}
 	r := gin.Default()
+	// 应用全局鉴权中间件，默认所有路由都需要鉴权，只有标记了IsPublic的路由才开放
+	r.Use(middleware.Auth.AuthRequired())
+	// 注册路由
 	routers.RouterUser(r)
 	err = r.Run(":" + viper.GetString("port"))
 	if err != nil {

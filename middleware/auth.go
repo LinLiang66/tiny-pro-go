@@ -38,9 +38,29 @@ func init() {
 	}
 }
 
-// AuthRequired 鉴权拦截器
+// IsPublic 标记路由为公开访问（类似Java的@Public注解）
+func IsPublic() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 在请求上下文中设置公开标记
+		c.Set("isPublic", true)
+		// 继续执行后续中间件
+		c.Next()
+	}
+}
+
+// AuthRequired 鉴权拦截器 - 支持类似Java注解的IsPublic标记
 func (m *AuthMiddleware) AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 步骤1: 检查当前路由是否有IsPublic中间件
+		handlerNames := c.HandlerNames()
+		handlersStr := fmt.Sprintf("%v", handlerNames)
+		hasIsPublic := strings.Contains(handlersStr, "IsPublic")
+		// 如果有IsPublic中间件，直接放行
+		if hasIsPublic {
+			c.Next()
+			return
+		}
+		// 步骤2: 执行鉴权逻辑
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
@@ -48,13 +68,15 @@ func (m *AuthMiddleware) AuthRequired() gin.HandlerFunc {
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
+		// 验证Bearer格式
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Bearer token format required"})
 			c.Abort()
 			return
 		}
 
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		// 解析并验证token
 		claims, err := m.parseToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: " + err.Error()})
@@ -64,19 +86,20 @@ func (m *AuthMiddleware) AuthRequired() gin.HandlerFunc {
 
 		// 检查token是否在黑名单中(已注销)
 		ctx := context.Background()
-		blacklisted := utils.Redis.Exists(ctx, fmt.Sprintf("blacklist:%s", tokenString))
-		if blacklisted {
+		exists := utils.Redis.Exists(ctx, fmt.Sprintf("blacklist:%s", tokenString))
+		if exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has been revoked"})
 			c.Abort()
 			return
 		}
 
-		// 将用户信息存储到上下文中
+		// 步骤3: 将用户信息存储到上下文中
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("role", claims.Role)
 		c.Set("claims", claims)
 
+		// 步骤4: 继续执行后续中间件和路由处理函数
 		c.Next()
 	}
 }
