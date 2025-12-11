@@ -185,7 +185,7 @@ func (u UserImpl) GetAllUser(paginationQuery dto.PaginationQueryDto, name, email
 
 	// 分页查询
 	offset := (paginationQuery.Page - 1) * paginationQuery.Limit
-	result := query.Offset(offset).Limit(paginationQuery.Limit).Find(&users)
+	result := query.Preload("Roles.Permissions").Offset(offset).Limit(paginationQuery.Limit).Find(&users)
 
 	if result.Error != nil {
 		return nil, result.Error

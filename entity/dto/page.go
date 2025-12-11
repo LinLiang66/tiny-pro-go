@@ -25,7 +25,10 @@ type Meta struct {
 	NumberOfElements int   `json:"numberOfElements"`
 	Size             int   `json:"size"`
 	TotalPages       int   `json:"totalPages"`
-	Number           int   `json:"totalItems"` // 从 1 开始
+	CurrentPage      int   `json:"currentPage"`
+	TotalItems       int64 `json:"totalItems"`
+	ItemCount        int   `json:"itemCount"`
+	ItemsPerPage     int   `json:"itemsPerPage"`
 }
 
 // NewPageWrapper 创建新的分页包装器
@@ -37,7 +40,10 @@ func NewPageWrapper[T any](content []T, totalElements int64, numberOfElements in
 			NumberOfElements: numberOfElements,
 			Size:             size,
 			TotalPages:       totalPages,
-			Number:           number,
+			CurrentPage:      number,
+			TotalItems:       totalElements,
+			ItemCount:        numberOfElements,
+			ItemsPerPage:     size,
 		},
 	}
 }
