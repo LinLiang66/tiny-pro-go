@@ -11,7 +11,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 )
 
-// 定义查询类型常量，模拟Java注解的查询类型
+// QueryType 定义查询类型常量
 type QueryType string
 
 const (
