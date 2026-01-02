@@ -65,8 +65,8 @@ func (r RoleImpl) FindAllDetail(page, limit int, name string) (*dto.RolePMVo, er
 	// 获取总数
 	query.Count(&total)
 
-	// 分页查询
-	result := query.Offset(offset).Limit(limit).Find(&roles)
+	// 分页查询 - 修改此行
+	result := query.Preload("Permissions").Preload("Menus").Offset(offset).Limit(limit).Find(&roles)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -34,7 +34,6 @@ func (ic I18Controller) CreateI18Dto(c *gin.Context) {
 		utils.Waring(c, err.Error())
 		return
 	}
-
 	utils.SuccessData(c, result)
 }
 
@@ -89,8 +88,7 @@ func (ic I18Controller) FindAll(c *gin.Context) {
 		utils.Waring(c, err.Error())
 		return
 	}
-
-	utils.SuccessData(c, result)
+	c.JSON(http.StatusOK, result)
 }
 
 // FindOne 根据ID获取单个国际化条目

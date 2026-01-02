@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"net/http"
 	"strconv"
 	"tiny-admin-api-serve/entity/dto"
 	"tiny-admin-api-serve/impl"
@@ -43,8 +44,8 @@ func (lc *LangController) FindAllLang(c *gin.Context) {
 		utils.Waring(c, err.Error())
 		return
 	}
-
-	utils.SuccessData(c, result)
+	c.JSON(http.StatusOK, result)
+	//utils.SuccessData(c, result)
 }
 
 // UpdateLang 更新语言

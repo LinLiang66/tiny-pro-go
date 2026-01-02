@@ -99,18 +99,18 @@ func Success(c *gin.Context) {
 	c.Set(sessionStatus.MsgKey, success)
 }
 func SuccessMsg(c *gin.Context, msg string) {
-	rd := &response.ResponseData{Code: response.Success, Msg: msg}
+	rd := &response.ResponseData{Code: response.Success, Success: true, Msg: msg}
 	c.JSON(http.StatusOK, rd)
 	c.Set(sessionStatus.MsgKey, rd)
 }
 
 func SuccessData(c *gin.Context, data interface{}) {
-	rd := &response.ResponseData{Code: response.Success, Msg: response.Success.Msg(), Data: data}
+	rd := &response.ResponseData{Code: response.Success, Msg: response.Success.Msg(), Success: true, Data: data}
 	c.JSON(http.StatusOK, rd)
 	c.Set(sessionStatus.MsgKey, rd)
 }
 func SuccessListData(c *gin.Context, rows interface{}, total int64) {
-	c.JSON(http.StatusOK, response.ResponseData{Code: response.Success, Msg: response.Success.Msg(), Data: response.ListData{Rows: rows, Total: total}})
+	c.JSON(http.StatusOK, response.ResponseData{Code: response.Success, Msg: response.Success.Msg(), Success: true, Data: response.ListData{Rows: rows, Total: total}})
 }
 func SuccessGzip(c *gin.Context, gzipData []byte) {
 	c.Writer.Header().Set("Content-Encoding", "gzip")
