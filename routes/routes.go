@@ -2,8 +2,8 @@ package routers
 
 import (
 	"tiny-admin-api-serve/controller"
+	"tiny-admin-api-serve/entity/dto"
 	"tiny-admin-api-serve/middleware"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -91,5 +91,23 @@ func RouterUser(engine *gin.Engine) {
 		langGroup.PATCH("/:id", langController.UpdateLang)
 		langGroup.DELETE("/:id", langController.RemoveLang)
 	}
+
+	// 示例：使用通用CRUD路由注册功能
+	// 方式1：注册默认的所有CRUD路由
+	RegisterDefaultCrudRoutes[dto.User](engine, "/api/user", middleware.IsPublic())
+
+	// 方式2：自定义注册指定的CRUD路由
+	// RegisterCrudRoutes[dto.User](engine, CrudRouterConfig[dto.User]{
+	// 	Path: "/api/user-custom",
+	// 	Apis: []elastic.Api{
+	// 		elastic.ApiCreate,
+	// 		elastic.ApiGet,
+	// 		elastic.ApiUpdate,
+	// 		elastic.ApiDelete,
+	// 		elastic.ApiPage,
+	// 		elastic.ApiCount,
+	// 	},
+	// 	Middlewares: []gin.HandlerFunc{middleware.IsPublic()},
+	// })
 
 }

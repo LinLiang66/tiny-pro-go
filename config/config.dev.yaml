@@ -43,3 +43,15 @@ upload_file:
 jwt:
   secret: SJ_Wyz3dmsdbDOkDujOTSSoBjGQP1BMsVnj
   app_name: tiny-admin
+  # Elasticsearch 配置
+elasticsearch:
+  addresses:
+    - http://localhost:9200
+  # 如果启用了认证，取消下面的注释并填写相应的用户名和密码
+  #username: root
+  #password: 123456789
+  # 如果使用HTTPS并需要验证CA证书，取消下面的注释并填写证书内容
+  # ca_cert: |
+  #   -----BEGIN CERTIFICATE-----
+  #   ... 证书内容 ...
+  #   -----END CERTIFICATE-----

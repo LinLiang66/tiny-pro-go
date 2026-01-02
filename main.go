@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"tiny-admin-api-serve/middleware"
+	jsonmiddleware "tiny-admin-api-serve/middleware/json"
 	routers "tiny-admin-api-serve/routes"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,8 @@ func main() {
 		return
 	}
 	r := gin.Default()
+	// 应用自定义JSON序列化中间件
+	r.Use(jsonmiddleware.CustomJSON())
 	// 应用全局鉴权中间件，默认所有路由都需要鉴权，只有标记了IsPublic的路由才开放
 	r.Use(middleware.Auth.AuthRequired())
 	// 注册路由
