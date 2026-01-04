@@ -15,6 +15,7 @@ type User struct {
 	Salary float64  `json:"salary" es:"salary"`
 	Active bool     `json:"active" es:"active"`
 	Tags   []string `json:"tags" es:"tags"`
+	
 }
 
 // Example 使用示例

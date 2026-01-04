@@ -15,8 +15,7 @@ import (
 
 // BaseRepository ES 基础仓库实现
 type BaseRepository[T any] struct {
-	client    *elasticsearch.TypedClient
-	indexName string
+	client *elasticsearch.TypedClient
 }
 
 // NewBaseRepository 创建新的基础仓库
@@ -26,14 +25,53 @@ func NewBaseRepository[T any]() (*BaseRepository[T], error) {
 		return nil, err
 	}
 
-	// 创建一个临时实例来获取索引名
-	var model T
-	indexName := GetIndexName(model)
-
 	return &BaseRepository[T]{
-		client:    client,
-		indexName: indexName,
+		client: client,
 	}, nil
+}
+
+// getCurrentIndexName 获取当前的索引名（带时间后缀）
+func (r *BaseRepository[T]) getCurrentIndexName() string {
+	var model T
+	return GetIndexName(model)
+}
+
+// getBaseIndexName 获取基础索引名（不带时间后缀）
+func (r *BaseRepository[T]) getBaseIndexName() string {
+	var model T
+	return GetBaseIndexName(model)
+}
+
+// getIndexPattern 获取索引模式（通配符模式），用于跨索引查询
+func (r *BaseRepository[T]) getIndexPattern() string {
+	var model T
+	return GetIndexPattern(model)
+}
+
+// getIndexNamesByDateRange 根据日期范围获取索引名列表，用于精确的跨索引查询
+func (r *BaseRepository[T]) getIndexNamesByDateRange(startTime, endTime time.Time, timeSuffixFormat string) []string {
+	var model T
+	return GetIndexNamesByDateRange(model, startTime, endTime, timeSuffixFormat)
+}
+
+// ensureIndexExists 检查索引是否存在，如果不存在则创建它
+func (r *BaseRepository[T]) ensureIndexExists(ctx context.Context, indexName string) error {
+	// 检查索引是否存在
+	exists, err := r.client.Indices.Exists(indexName).Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		// 索引不存在，创建索引
+		// 这里使用默认的索引设置，实际可以根据需求调整
+		_, err = r.client.Indices.Create(indexName).Do(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Insert 插入单个文档
@@ -47,10 +85,17 @@ func (r *BaseRepository[T]) Insert(ctx context.Context, entity *T) (string, erro
 	// 执行索引请求
 	var resp *index.Response
 	var err error
+	indexName := r.getCurrentIndexName()
+
+	// 确保索引存在
+	if err := r.ensureIndexExists(ctx, indexName); err != nil {
+		return "", err
+	}
+
 	if id != "" {
-		resp, err = r.client.Index(r.indexName).Id(id).Document(entity).Do(ctx)
+		resp, err = r.client.Index(indexName).Id(id).Document(entity).Do(ctx)
 	} else {
-		resp, err = r.client.Index(r.indexName).Document(entity).Do(ctx)
+		resp, err = r.client.Index(indexName).Document(entity).Do(ctx)
 	}
 
 	if err != nil {
@@ -67,6 +112,12 @@ func (r *BaseRepository[T]) InsertBatch(ctx context.Context, entities []*T) ([]s
 	// 准备批量请求
 	bulkReq := r.client.Bulk()
 	ids := make([]string, 0, len(entities))
+	indexName := r.getCurrentIndexName()
+
+	// 确保索引存在
+	if err := r.ensureIndexExists(ctx, indexName); err != nil {
+		return nil, err
+	}
 
 	for _, entity := range entities {
 		// 设置创建时间和更新时间
@@ -77,7 +128,7 @@ func (r *BaseRepository[T]) InsertBatch(ctx context.Context, entities []*T) ([]s
 
 		// 构建索引请求
 		indexOp := types.IndexOperation{
-			Index_: &r.indexName,
+			Index_: &indexName,
 		}
 		if id != "" {
 			indexOp.Id_ = &id
@@ -127,7 +178,8 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 	}
 
 	// 执行更新请求
-	_, err := r.client.Update(r.indexName, id).Doc(entity).Do(ctx)
+	indexName := r.getCurrentIndexName()
+	_, err := r.client.Update(indexName, id).Doc(entity).Do(ctx)
 	return err
 }
 
@@ -137,7 +189,8 @@ func (r *BaseRepository[T]) UpdateById(ctx context.Context, id string, update ma
 	update["updated_at"] = time.Now().UTC()
 
 	// 执行更新请求
-	_, err := r.client.Update(r.indexName, id).Doc(update).Do(ctx)
+	indexName := r.getCurrentIndexName()
+	_, err := r.client.Update(indexName, id).Doc(update).Do(ctx)
 	return err
 }
 
@@ -150,14 +203,16 @@ func (r *BaseRepository[T]) Delete(ctx context.Context, entity *T) error {
 	}
 
 	// 执行删除请求
-	_, err := r.client.Delete(r.indexName, id).Do(ctx)
+	indexName := r.getCurrentIndexName()
+	_, err := r.client.Delete(indexName, id).Do(ctx)
 	return err
 }
 
 // DeleteById 根据 ID 删除文档
 func (r *BaseRepository[T]) DeleteById(ctx context.Context, id string) error {
 	// 执行删除请求
-	_, err := r.client.Delete(r.indexName, id).Do(ctx)
+	indexName := r.getCurrentIndexName()
+	_, err := r.client.Delete(indexName, id).Do(ctx)
 	return err
 }
 
@@ -168,8 +223,9 @@ func (r *BaseRepository[T]) DeleteBatch(ctx context.Context, ids []string) error
 
 	for _, id := range ids {
 		// 构建删除请求
+		indexName := r.getCurrentIndexName()
 		deleteOp := types.DeleteOperation{
-			Index_: &r.indexName,
+			Index_: &indexName,
 			Id_:    &id,
 		}
 
@@ -195,8 +251,9 @@ func (r *BaseRepository[T]) DeleteBatch(ctx context.Context, ids []string) error
 
 // GetById 根据 ID 获取文档
 func (r *BaseRepository[T]) GetById(ctx context.Context, id string) (*T, error) {
-	// 执行获取请求
-	resp, err := r.client.Get(r.indexName, id).Do(ctx)
+	// 执行获取请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	resp, err := r.client.Get(indexPattern, id).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -247,8 +304,9 @@ func (r *BaseRepository[T]) GetOne(ctx context.Context, wrapper QueryWrapper[T])
 	size := 1
 	req.Size = &size
 
-	// 执行搜索请求
-	resp, err := r.client.Search().Index(r.indexName).Request(req).Do(ctx)
+	// 执行搜索请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	resp, err := r.client.Search().Index(indexPattern).Request(req).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -278,8 +336,9 @@ func (r *BaseRepository[T]) List(ctx context.Context, wrapper QueryWrapper[T]) (
 	// 构建搜索请求
 	req := wrapper.BuildSearchRequest()
 
-	// 执行搜索请求
-	resp, err := r.client.Search().Index(r.indexName).Request(req).Do(ctx)
+	// 执行搜索请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	resp, err := r.client.Search().Index(indexPattern).Request(req).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -309,8 +368,9 @@ func (r *BaseRepository[T]) Page(ctx context.Context, wrapper QueryWrapper[T], p
 	// 构建搜索请求
 	req := wrapper.Limit(size).Offset(offset).BuildSearchRequest()
 
-	// 执行搜索请求
-	resp, err := r.client.Search().Index(r.indexName).Request(req).Do(ctx)
+	// 执行搜索请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	resp, err := r.client.Search().Index(indexPattern).Request(req).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +399,7 @@ func (r *BaseRepository[T]) Page(ctx context.Context, wrapper QueryWrapper[T], p
 		Current: page,
 		Size:    size,
 		Records: entities,
-		Index:   r.indexName,
+		Index:   indexPattern, // 返回索引模式而不是单个索引名
 	}, nil
 }
 
@@ -348,8 +408,9 @@ func (r *BaseRepository[T]) Count(ctx context.Context, wrapper QueryWrapper[T]) 
 	// 构建查询
 	query := wrapper.BuildQuery()
 
-	// 执行计数请求
-	resp, err := r.client.Count().Index(r.indexName).Query(&query).Do(ctx)
+	// 执行计数请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	resp, err := r.client.Count().Index(indexPattern).Query(&query).Do(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -359,8 +420,9 @@ func (r *BaseRepository[T]) Count(ctx context.Context, wrapper QueryWrapper[T]) 
 
 // Exists 检查文档是否存在
 func (r *BaseRepository[T]) Exists(ctx context.Context, id string) (bool, error) {
-	// 执行存在请求
-	exists, err := r.client.Exists(r.indexName, id).Do(ctx)
+	// 执行存在请求 - 使用索引模式支持跨索引查询
+	indexPattern := r.getIndexPattern()
+	exists, err := r.client.Exists(indexPattern, id).Do(ctx)
 	if err != nil {
 		return false, err
 	}
